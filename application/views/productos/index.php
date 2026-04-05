@@ -153,7 +153,7 @@ function confirmarEliminar(url) {
 <?php if ($this->session->flashdata('error')): ?>
     Swal.fire({
         icon: 'error',
-        title: '¡No se puede eliminar!',
+        title: 'No se pudo completar',
         text: '<?= $this->session->flashdata('error') ?>',
         confirmButtonColor: '#dc2626',
         confirmButtonText: 'Entendido',
@@ -166,7 +166,7 @@ function confirmarEliminar(url) {
 <?php if ($this->session->flashdata('success')): ?>
     Swal.fire({
         icon: 'success',
-        title: '¡Eliminado!',
+        title: 'Listo',
         text: '<?= $this->session->flashdata('success') ?>',
         confirmButtonColor: '#2563eb',
         timer: 2000,

@@ -59,29 +59,19 @@ class Producto_model extends CI_Model {
     }
 
     /**
-     * Máximo de cócteles vendibles según repositorio, licor y contador (regla N ventas = 1 botella).
+     * Máximo de cócteles vendibles: R botellas en bar × V tragos por botella, menos tragos ya contados (C).
+     * No usar solo floor((C+N)/V)-floor(C/V) <= R: eso permite ~V-1 ventas de más (ej. R=5,V=5 daba 29 en vez de 25).
      */
     public function max_cocteles_vendibles($coctel, $licor) {
         if (!$coctel || $coctel->tipo_linea !== 'cocteles' || !$licor || $licor->tipo_linea !== 'licores') {
             return 0;
         }
         $V = max(1, (int) $coctel->ventas_por_botella);
+        $R = max(0, (int) floor((float) $coctel->repositorio_botellas));
         $C = (int) $coctel->contador_ventas_coctel;
-        $R = (float) $coctel->repositorio_botellas;
-        $L = (float) $licor->stock;
-        $maxComp = (int) min($R, $L);
-        $lo = 0;
-        $hi = 100000;
-        while ($lo < $hi) {
-            $mid = (int) (($lo + $hi + 1) / 2);
-            $comp = (int) (floor(($C + $mid) / $V) - floor($C / $V));
-            if ($comp <= $maxComp) {
-                $lo = $mid;
-            } else {
-                $hi = $mid - 1;
-            }
-        }
-        return $lo;
+        $C = (($C % $V) + $V) % $V;
+
+        return max(0, $R * $V - $C);
     }
 
     /**
@@ -145,8 +135,8 @@ class Producto_model extends CI_Model {
     }
 
     /**
-     * Cada venta de cóctel: actualiza contador, repositorio y stock del licor (botellas consumidas).
-     * Devuelve ['ok'=>bool, 'message'=>string, 'botellas_consumidas'=>int]
+     * Cada venta de cóctel: avanza contador y descuenta solo del repositorio de bar al completar cada V ventas.
+     * El stock del licor en almacén no se toca aquí (baja solo al reponer bar desde edición del cóctel).
      */
     public function aplicar_salida_coctel($coctel, $licor, $cantidad, $id_sucursal) {
         $V = max(1, (int) $coctel->ventas_por_botella);
@@ -155,16 +145,17 @@ class Producto_model extends CI_Model {
             return ['ok' => false, 'message' => 'Cantidad inválida', 'botellas_consumidas' => 0];
         }
         $C = (int) $coctel->contador_ventas_coctel;
+        $C = (($C % $V) + $V) % $V;
         $comp = (int) (floor(($C + $N) / $V) - floor($C / $V));
         $newC = ($C + $N) % $V;
 
         $maxV = $this->max_cocteles_vendibles($coctel, $licor);
         if ($N > $maxV) {
-            return ['ok' => false, 'message' => 'No hay suficiente repositorio o botellas de licor para esta cantidad de cócteles.', 'botellas_consumidas' => 0];
+            return ['ok' => false, 'message' => 'No hay suficientes botellas en el repositorio de bar para esta cantidad de cócteles. Repone el bar desde la edición del producto.', 'botellas_consumidas' => 0];
         }
 
-        $newRepo = (float) $coctel->repositorio_botellas - $comp;
-        $newLicor = (float) $licor->stock - $comp;
+        $R = max(0, (int) floor((float) $coctel->repositorio_botellas));
+        $newRepo = (float) ($R - $comp);
 
         $this->db->where('id', $coctel->id)->where('id_sucursal', $id_sucursal);
         $this->db->update('productos', [
@@ -172,10 +163,7 @@ class Producto_model extends CI_Model {
             'repositorio_botellas' => $newRepo,
         ]);
 
-        $this->db->where('id', $licor->id)->where('id_sucursal', $id_sucursal);
-        $this->db->update('productos', ['stock' => $newLicor]);
-
-        return ['ok' => true, 'message' => '', 'botellas_consumidas' => $comp, 'nuevo_contador' => $newC, 'nuevo_repo' => $newRepo, 'nuevo_licor_stock' => $newLicor];
+        return ['ok' => true, 'message' => '', 'botellas_consumidas' => $comp, 'nuevo_contador' => $newC, 'nuevo_repo' => $newRepo];
     }
 
     /**

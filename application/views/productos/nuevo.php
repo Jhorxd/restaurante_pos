@@ -54,7 +54,7 @@
 
             <div x-show="tipo === 'cocteles'" x-cloak class="rounded-xl border border-amber-200 bg-amber-50/80 p-5 space-y-4">
                 <p class="text-xs text-amber-900 leading-relaxed">
-                    Cada cóctel lleva un <strong>repositorio de bar</strong> (hasta 5 botellas por defecto). Por cada <strong>10 ventas</strong> (ajustable) se descuenta <strong>1 botella</strong> del repositorio y <strong>1 botella</strong> del licor en almacén. Luego puedes <strong>reponer</strong> el bar desde la edición del producto.
+                    Cada cóctel lleva un <strong>repositorio de bar</strong> (hasta 5 botellas por defecto). Por cada <strong>10 ventas</strong> (ajustable) se descuenta <strong>1 botella solo del bar</strong>. El <strong>stock del licor en almacén</strong> baja cuando <strong>repones</strong> el bar (pasas botellas del almacén al bar), no en cada venta.
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
@@ -152,7 +152,7 @@
                     <label class="text-[10px] font-bold text-slate-400 uppercase">Stock mínimo (alertas)</label>
                     <input type="number" name="stock_minimo" value="5" class="w-full max-w-xs bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:bg-white/20 transition-all font-bold">
                 </div>
-                <p x-show="tipo === 'cocteles'" class="text-[10px] text-slate-400 pt-2" x-cloak>Los cócteles no usan stock clásico; el inventario es repositorio de bar más licor en almacén.</p>
+                <p x-show="tipo === 'cocteles'" class="text-[10px] text-slate-400 pt-2" x-cloak>Los cócteles no usan stock clásico: vendes contra el bar; el almacén del licor solo se mueve al reponer.</p>
             </div>
 
             <button type="submit" class="w-full py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-lg shadow-blue-500/20">

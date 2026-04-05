@@ -119,21 +119,6 @@ class Ventas extends CI_Controller {
                 'stock_resultante' => $repo_res,
                 'fecha'            => date('Y-m-d H:i:s')
             ]);
-            $comp = (int) $res['botellas_consumidas'];
-            if ($comp > 0) {
-                $licor_des = $this->Producto_model->get_producto($prod->id_licor_base, $id_sucursal);
-                $this->db->insert('kardex', [
-                    'id_sucursal'      => $id_sucursal,
-                    'id_producto'      => $prod->id_licor_base,
-                    'tipo_movimiento'  => 'Salida',
-                    'motivo'           => 'Venta',
-                    'doc_tipo'         => 'Venta',
-                    'doc_id'           => $id_venta,
-                    'cantidad'         => $comp,
-                    'stock_resultante' => $licor_des ? $licor_des->stock : 0,
-                    'fecha'            => date('Y-m-d H:i:s')
-                ]);
-            }
         } else {
             if ((float) $prod->stock < $cantidad) {
                 $this->db->trans_rollback();
