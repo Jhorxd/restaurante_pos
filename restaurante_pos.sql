@@ -254,6 +254,36 @@ INSERT INTO `usuarios` (`id`, `nombre`, `usuario`, `password`, `rol`, `id_sucurs
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `mesas`
+--
+
+CREATE TABLE `mesas` (
+  `id` int(11) NOT NULL,
+  `id_sucursal` int(11) NOT NULL,
+  `codigo` varchar(20) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `capacidad` int(11) NOT NULL DEFAULT 4,
+  `zona` varchar(80) DEFAULT NULL,
+  `pos_orden` int(11) NOT NULL DEFAULT 0,
+  `pos_x` int(11) NOT NULL DEFAULT 0,
+  `pos_y` int(11) NOT NULL DEFAULT 0,
+  `estado` enum('libre','ocupada','reservada','limpieza') NOT NULL DEFAULT 'libre',
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `notas` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Volcado de datos para la tabla `mesas`
+--
+
+INSERT INTO `mesas` (`id`, `id_sucursal`, `codigo`, `nombre`, `capacidad`, `zona`, `pos_orden`, `pos_x`, `pos_y`, `estado`, `activo`, `notas`) VALUES
+(1, 1, 'M01', 'Mesa 1', 4, 'Salón', 1, 0, 0, 'libre', 1, NULL),
+(2, 1, 'M02', 'Mesa 2', 4, 'Salón', 2, 1, 0, 'libre', 1, NULL),
+(3, 1, 'T01', 'Terraza 1', 2, 'Terraza', 3, 2, 0, 'libre', 1, NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `ventas`
 --
 
@@ -263,6 +293,7 @@ CREATE TABLE `ventas` (
   `id_usuario` int(11) NOT NULL,
   `id_cliente` int(11) DEFAULT NULL,
   `id_caja` int(11) NOT NULL,
+  `id_mesa` int(11) DEFAULT NULL,
   `total` decimal(10,2) NOT NULL,
   `metodo_pago` enum('efectivo','tarjeta','yape','plin','transferencia') NOT NULL DEFAULT 'efectivo',
   `monto_recibido` decimal(10,2) DEFAULT NULL,
@@ -274,17 +305,17 @@ CREATE TABLE `ventas` (
 -- Volcado de datos para la tabla `ventas`
 --
 
-INSERT INTO `ventas` (`id`, `id_sucursal`, `id_usuario`, `id_cliente`, `id_caja`, `total`, `metodo_pago`, `monto_recibido`, `vuelto`, `fecha_registro`) VALUES
-(1, 1, 1, 1, 1, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:50:20'),
-(2, 1, 1, NULL, 1, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:52:01'),
-(3, 1, 1, NULL, 1, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:53:48'),
-(4, 1, 1, NULL, 1, '20.00', 'yape', '20.00', '0.00', '2026-03-10 21:08:45'),
-(5, 1, 1, NULL, 1, '20.00', 'yape', '20.00', '0.00', '2026-03-10 22:48:34'),
-(6, 1, 1, NULL, 1, '70.00', 'transferencia', '70.00', '0.00', '2026-03-12 04:49:17'),
-(7, 1, 1, NULL, 1, '30.00', 'tarjeta', '30.00', '0.00', '2026-03-29 06:30:01'),
-(8, 1, 1, NULL, 1, '120.00', 'tarjeta', '120.00', '0.00', '2026-03-29 06:30:30'),
-(9, 1, 1, NULL, 1, '60.00', 'tarjeta', '60.00', '0.00', '2026-03-29 06:53:23'),
-(10, 1, 1, NULL, 1, '90.00', 'tarjeta', '90.00', '0.00', '2026-03-29 07:03:57');
+INSERT INTO `ventas` (`id`, `id_sucursal`, `id_usuario`, `id_cliente`, `id_caja`, `id_mesa`, `total`, `metodo_pago`, `monto_recibido`, `vuelto`, `fecha_registro`) VALUES
+(1, 1, 1, 1, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:50:20'),
+(2, 1, 1, NULL, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:52:01'),
+(3, 1, 1, NULL, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:53:48'),
+(4, 1, 1, NULL, 1, NULL, '20.00', 'yape', '20.00', '0.00', '2026-03-10 21:08:45'),
+(5, 1, 1, NULL, 1, NULL, '20.00', 'yape', '20.00', '0.00', '2026-03-10 22:48:34'),
+(6, 1, 1, NULL, 1, NULL, '70.00', 'transferencia', '70.00', '0.00', '2026-03-12 04:49:17'),
+(7, 1, 1, NULL, 1, NULL, '30.00', 'tarjeta', '30.00', '0.00', '2026-03-29 06:30:01'),
+(8, 1, 1, NULL, 1, NULL, '120.00', 'tarjeta', '120.00', '0.00', '2026-03-29 06:30:30'),
+(9, 1, 1, NULL, 1, NULL, '60.00', 'tarjeta', '60.00', '0.00', '2026-03-29 06:53:23'),
+(10, 1, 1, NULL, 1, NULL, '90.00', 'tarjeta', '90.00', '0.00', '2026-03-29 07:03:57');
 
 -- --------------------------------------------------------
 
@@ -354,6 +385,14 @@ ALTER TABLE `kardex`
   ADD KEY `id_producto` (`id_producto`);
 
 --
+-- Indices de la tabla `mesas`
+--
+ALTER TABLE `mesas`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_mesa_sucursal_codigo` (`id_sucursal`,`codigo`),
+  ADD KEY `id_sucursal` (`id_sucursal`);
+
+--
 -- Indices de la tabla `productos`
 --
 ALTER TABLE `productos`
@@ -390,6 +429,7 @@ ALTER TABLE `ventas`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_sucursal` (`id_sucursal`),
   ADD KEY `id_caja` (`id_caja`),
+  ADD KEY `ventas_ibfk_mesa` (`id_mesa`),
   ADD KEY `ventas_ibfk_cliente` (`id_cliente`);
 
 --
@@ -433,6 +473,12 @@ ALTER TABLE `compra_detalle`
 --
 ALTER TABLE `kardex`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT de la tabla `mesas`
+--
+ALTER TABLE `mesas`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de la tabla `productos`
@@ -509,6 +555,12 @@ ALTER TABLE `kardex`
   ADD CONSTRAINT `kardex_ibfk_2` FOREIGN KEY (`id_producto`) REFERENCES `productos` (`id`);
 
 --
+-- Filtros para la tabla `mesas`
+--
+ALTER TABLE `mesas`
+  ADD CONSTRAINT `mesas_ibfk_sucursal` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`);
+
+--
 -- Filtros para la tabla `productos`
 --
 ALTER TABLE `productos`
@@ -533,6 +585,7 @@ ALTER TABLE `usuarios`
 ALTER TABLE `ventas`
   ADD CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`),
   ADD CONSTRAINT `ventas_ibfk_2` FOREIGN KEY (`id_caja`) REFERENCES `cajas` (`id`),
+  ADD CONSTRAINT `ventas_ibfk_mesa` FOREIGN KEY (`id_mesa`) REFERENCES `mesas` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `ventas_ibfk_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `clientes` (`id_cliente`);
 
 --

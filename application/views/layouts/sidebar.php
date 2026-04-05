@@ -111,6 +111,13 @@
                 </li>
 
                 <li class="nav-item">
+                    <a href="<?= base_url('mesas') ?>" class="nav-link">
+                        <i class="fas fa-th"></i>
+                        <p>Mesas y salón</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a href="<?= base_url('clientes/cliente_index') ?>" class="nav-link">
                         <i class="fas fa-user-friends"></i>
                         <p>Clientes</p>

@@ -71,9 +71,25 @@
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col h-full overflow-hidden">
                     
                     <!-- Header carrito -->
-                    <div class="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                        <h2 class="text-sm font-black text-slate-800 uppercase tracking-tighter">Venta Actual</h2>
-                        <button @click="carrito = []; calcularTotal()" class="text-slate-400 hover:text-red-500 text-xs font-bold">Limpiar</button>
+                    <div class="p-3 border-b border-slate-100 bg-slate-50 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-sm font-black text-slate-800 uppercase tracking-tighter">Venta Actual</h2>
+                            <button @click="carrito = []; calcularTotal()" class="text-slate-400 hover:text-red-500 text-xs font-bold">Limpiar</button>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Mesa / salón</p>
+                            <select x-model="mesaId"
+                                    class="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-2 outline-none focus:ring-2 focus:ring-blue-500/30">
+                                <option value="">Mostrador (sin mesa)</option>
+                                <template x-for="m in mesasLista" :key="m.id">
+                                    <option :value="String(m.id)" x-text="m.label + ' [' + m.estado + ']'"></option>
+                                </template>
+                            </select>
+                            <label x-show="mesaId" class="mt-2 flex items-center gap-2 cursor-pointer text-[10px] font-bold text-slate-600">
+                                <input type="checkbox" x-model="liberarMesa" class="rounded border-slate-300 text-blue-600">
+                                Liberar mesa al cobrar (cliente se retira)
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Items del carrito -->
@@ -152,11 +168,18 @@
                             <span class="text-blue-600 font-black text-xl" x-text="'S/ ' + totalVenta"></span>
                         </div>
                         
-                        <button @click="procesarVenta()" 
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 text-sm">
-                            <i class="fas fa-check-circle"></i>
-                            FINALIZAR VENTA (F9)
-                        </button>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <button @click="guardarPedido()" 
+                                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 text-xs">
+                                <i class="fas fa-clipboard-list"></i>
+                                GUARDAR PEDIDO
+                            </button>
+                            <button @click="procesarVenta()" 
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 text-xs">
+                                <i class="fas fa-check-circle"></i>
+                                COBRAR (F9)
+                            </button>
+                        </div>
                     </div>
 
                 </div>
@@ -228,6 +251,10 @@ function posSystem() {
         isMobile: window.innerWidth < 1024,
         metodoPago: 'efectivo',
         montoRecibido: '',
+        mesaId: '',
+        idVentaActiva: 0,
+        mesasLista: [],
+        liberarMesa: true,
         _debounceTimer: null,
 
         isMobileDevice: /(android|iphone|ipad|mobile)/i.test(navigator.userAgent),
@@ -248,6 +275,33 @@ function posSystem() {
         init() {
             console.log("🚀 Sistema POS Iniciado");
             this.fetchProductos();
+            
+            const params = new URLSearchParams(window.location.search);
+            const idVentaQ = params.get('id_venta');
+            
+            this.fetchMesas().then(() => {
+                const mesaQ = params.get('mesa');
+                if (mesaQ) {
+                    this.mesaId = String(mesaQ);
+                }
+            });
+            
+            if (idVentaQ) {
+                this.idVentaActiva = parseInt(idVentaQ) || 0;
+                fetch(`<?= base_url('ventas/detalle_pendiente/') ?>${this.idVentaActiva}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.venta.estado === 'pendiente') {
+                        this.carrito = data.detalles.map(d => ({
+                            id: d.id_producto,
+                            nombre: d.nombre,
+                            precio: d.precio_unitario,
+                            cantidad: parseFloat(d.cantidad)
+                        }));
+                        this.calcularTotal();
+                    }
+                });
+            }
 
             window.addEventListener('resize', () => {
                 this.isMobile = window.innerWidth < 1024;
@@ -290,6 +344,13 @@ function posSystem() {
                 .then(res => res.json())
                 .then(data => { this.listaProductos = data; })
                 .catch(err => console.error("❌ Error:", err));
+        },
+
+        fetchMesas() {
+            return fetch('<?= base_url('mesas/lista_pos') ?>')
+                .then(res => res.json())
+                .then(data => { this.mesasLista = Array.isArray(data) ? data : []; })
+                .catch(() => { this.mesasLista = []; });
         },
 
         codigoBarrasDirecto() {
@@ -435,9 +496,12 @@ cerrarScannerMovil() {
         },
 
         sumarCant(index) {
-            if (this.carrito[index].cantidad < parseFloat(this.carrito[index].stock)) {
+            const max = parseFloat(this.carrito[index].stock);
+            if (isNaN(max) || this.carrito[index].cantidad < max) {
                 this.carrito[index].cantidad++;
                 this.calcularTotal();
+            } else if (!isNaN(max)) {
+                Swal.fire('Límite de Stock', 'No puedes agregar más del stock disponible', 'warning');
             }
         },
 
@@ -490,7 +554,9 @@ cerrarScannerMovil() {
                             total: this.totalVenta,
                             metodo_pago: this.metodoPago,
                             monto_recibido: this.metodoPago === 'efectivo' ? this.montoRecibido : this.totalVenta,
-                            vuelto: this.metodoPago === 'efectivo' ? this.vuelto : '0.00'
+                            vuelto: this.metodoPago === 'efectivo' ? this.vuelto : '0.00',
+                            id_mesa: this.mesaId ? parseInt(this.mesaId, 10) : 0,
+                            liberar_mesa: !!this.liberarMesa
                         })
                     })
                     .then(res => res.json())
@@ -500,7 +566,11 @@ cerrarScannerMovil() {
                             this.totalVenta = '0.00';
                             this.metodoPago = 'efectivo';
                             this.montoRecibido = '';
+                            this.mesaId = '';
+                            this.idVentaActiva = 0;
+                            this.liberarMesa = true;
                             this.fetchProductos();
+                            this.fetchMesas();
 
                             const ticketUrl = `<?= base_url('ventas/ticket/') ?>${data.id_venta}`;
 
@@ -516,7 +586,7 @@ cerrarScannerMovil() {
                                                 style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:700; font-size:12px; cursor:pointer;">
                                             🖨️ Imprimir
                                         </button>
-                                        <a href="${ticketUrl}" target="_blank"
+                                <a href="${ticketUrl}" target="_blank"
                                            style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; background:#f1f5f9; color:#475569; border-radius:10px; font-weight:700; text-decoration:none;">
                                             ↗ Abrir en pestaña
                                         </a>
@@ -536,6 +606,44 @@ cerrarScannerMovil() {
                     .catch(() => Swal.fire('Error', 'Falló la conexión con el servidor', 'error'));
                 }
             });
+        },
+
+        guardarPedido() {
+            if (this.carrito.length === 0) return Swal.fire('Error', 'Agrega productos para guardar el pedido', 'error');
+            if (!this.mesaId) return Swal.fire('Falta Mesa', 'Para un pedido pendiente, debes elegir o estar en una mesa', 'warning');
+
+            const payload = {
+                accion: 'pedido',
+                id_venta: this.idVentaActiva,
+                carrito: this.carrito,
+                total: this.totalVenta,
+                metodo_pago: 'efectivo', // No aplica acá
+                monto_recibido: 0,
+                vuelto: 0,
+                id_mesa: parseInt(this.mesaId, 10),
+                liberar_mesa: false
+            };
+
+            Swal.fire({
+                title: 'Enviando...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('<?= base_url('ventas/guardar') ?>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    Swal.fire('Pedido Guardado', 'Se ha actualizado la mesa correctamente.', 'success')
+                    .then(() => {
+                        window.location.href = '<?= base_url("mesas") ?>';
+                    });
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            }).catch(() => Swal.fire('Error', 'De conexión al servidor', 'error'));
         }
     }
 }

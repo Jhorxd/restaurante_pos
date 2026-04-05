@@ -41,6 +41,7 @@
                             <th class="px-4 py-3 font-bold">Ticket</th>
                             <th class="px-4 py-3 font-bold">Fecha / Hora</th>
                             <th class="px-4 py-3 font-bold">Cajero</th>
+                            <th class="px-4 py-3 font-bold">Mesa</th>
                             <th class="px-4 py-3 font-bold text-right">Total</th>
                             <th class="px-4 py-3 font-bold text-center">Método</th>
                             <th class="px-4 py-3 font-bold text-right">Acciones</th>
@@ -86,6 +87,17 @@
                                     </div>
                                 </td>
 
+                                <td class="px-4 py-3 align-middle">
+                                    <?php if (!empty($v->mesa_codigo)): ?>
+                                        <span class="text-xs font-bold text-slate-800"><?= htmlspecialchars($v->mesa_codigo) ?></span>
+                                        <div class="text-[10px] text-slate-400 truncate max-w-[120px]" title="<?= htmlspecialchars($v->mesa_nombre ?? '') ?>">
+                                            <?= htmlspecialchars($v->mesa_nombre ?? '') ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-[10px] text-slate-400 font-bold uppercase">Mostrador</span>
+                                    <?php endif; ?>
+                                </td>
+
                                 <!-- Total -->
                                 <td class="px-4 py-3 text-right align-middle">
                                     <div class="text-sm font-black text-slate-900">
@@ -124,7 +136,7 @@
                             </tr>
                         <?php endforeach; else: ?>
                             <tr>
-                                <td colspan="6" class="px-4 py-12 text-center">
+                                <td colspan="7" class="px-4 py-12 text-center">
                                     <div class="inline-flex flex-col items-center">
                                         <div class="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                                             <i class="fas fa-receipt text-slate-300 text-lg"></i>
