@@ -131,6 +131,12 @@
                                             <i class="fas fa-file-pdf mr-1 text-xs"></i>
                                             Ver PDF
                                         </a>
+                                        <button type="button"
+                                                onclick="abrirDetalleInsumos(<?= $v->id ?>)"
+                                                title="Ver insumos descontados"
+                                                class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 text-[11px] font-bold border border-violet-200 transition-colors">
+                                            <i class="fas fa-list-ul text-xs"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -158,3 +164,100 @@
 
     </div>
 </div>
+
+<!-- ═══════════ MODAL AUDITORÍA DE INSUMOS ═══════════ -->
+<div id="modal-insumos" class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+     style="background:rgba(15,23,42,0.55); backdrop-filter:blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <!-- Header modal -->
+        <div class="flex items-center justify-between px-6 py-4 bg-violet-600">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-boxes text-white text-lg"></i>
+                <div>
+                    <h3 class="text-white font-black text-sm uppercase tracking-widest">Insumos Descontados</h3>
+                    <p id="modal-venta-ref" class="text-violet-200 text-xs mt-0.5">Venta #—</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalInsumos()" class="text-white/70 hover:text-white transition-colors">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <!-- Contenido dinámico -->
+        <div id="modal-insumos-body" class="p-6 max-h-[60vh] overflow-y-auto">
+            <div class="flex items-center justify-center py-10">
+                <div class="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 text-right">
+            <button onclick="cerrarModalInsumos()"
+                    class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-all">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const _BASE = '<?= base_url() ?>';
+
+function abrirDetalleInsumos(idVenta) {
+    const modal = document.getElementById('modal-insumos');
+    const body  = document.getElementById('modal-insumos-body');
+    document.getElementById('modal-venta-ref').textContent = 'Venta #' + String(idVenta).padStart(6, '0');
+    body.innerHTML = '<div class="flex items-center justify-center py-10"><div class="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full"></div></div>';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    fetch(_BASE + 'ventas/detalle_insumos_venta/' + idVenta)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                body.innerHTML = '<p class="text-center text-sm text-red-500 py-8">Error al cargar los datos.</p>';
+                return;
+            }
+            if (!data.insumos || data.insumos.length === 0) {
+                body.innerHTML = `
+                    <div class="text-center py-10">
+                        <i class="fas fa-info-circle text-4xl text-slate-200 mb-4"></i>
+                        <p class="text-sm text-slate-500 font-medium">Esta venta no tiene insumos compuestos.</p>
+                        <p class="text-xs text-slate-400 mt-1">Solo se vendieron productos simples (descuento de stock propio).</p>
+                    </div>`;
+                return;
+            }
+            let rows = '';
+            data.insumos.forEach(ins => {
+                rows += `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                    <td class="px-4 py-3 text-sm font-bold text-slate-800">${ins.insumo_nombre}</td>
+                    <td class="px-4 py-3 text-center"><span class="font-black text-violet-700">${parseFloat(ins.cantidad).toFixed(4)}</span></td>
+                    <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700">${parseFloat(ins.stock_resultante).toFixed(2)}</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-400 max-w-[160px] truncate" title="${ins.nota || ''}">${ins.nota || '—'}</td>
+                </tr>`;
+            });
+            body.innerHTML = `
+            <table class="w-full text-left min-w-[500px]">
+                <thead>
+                    <tr class="text-[10px] uppercase tracking-widest text-slate-400 border-b border-slate-200">
+                        <th class="px-4 py-2 font-bold">Insumo</th>
+                        <th class="px-4 py-2 font-bold text-center">Cant. descontada</th>
+                        <th class="px-4 py-2 font-bold text-center">Stock resultante</th>
+                        <th class="px-4 py-2 font-bold">Referencia</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        })
+        .catch(() => {
+            body.innerHTML = '<p class="text-center text-sm text-red-500 py-8">Error de red al cargar insumos.</p>';
+        });
+}
+
+function cerrarModalInsumos() {
+    const modal = document.getElementById('modal-insumos');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+document.getElementById('modal-insumos').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalInsumos();
+});
+</script>

@@ -5,23 +5,26 @@ class Productos extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        // Verificar si el usuario está logueado
         if (!$this->session->userdata('id')) {
             redirect('login');
         }
-        $this->load->model('Producto_model'); // Asegúrate de crear este modelo
+        $this->load->model('Producto_model');
+        $this->load->model('Receta_model');
+        $this->load->model('Categoria_model');
     }
 
     // Listado de productos de LA SUCURSAL actual (pestañas por línea)
     public function index() {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $tab = $this->input->get('tab');
-        if (!is_string($tab) || !in_array($tab, ['todos', 'produccion', 'licores', 'cocteles'], true)) {
-            $tab = 'todos';
-        }
+        $tab = $this->input->get('tab') ?: 'todos';
+        
         $data['tab_activa'] = $tab;
-        $data['conteos'] = $this->Producto_model->conteos_por_tipo($id_sucursal);
-        $data['productos'] = $this->Producto_model->get_productos_by_sucursal($id_sucursal, $tab);
+        $data['categorias'] = $this->Categoria_model->get_todas();
+        $data['conteos']    = $this->Producto_model->conteos_por_tipo($id_sucursal);
+        $data['productos']  = $this->Producto_model->get_productos_by_sucursal($id_sucursal, $tab);
+
+        // Variable global para estadísticas del dashboard
+        $data['productos_dashboard'] = $this->Producto_model->get_productos_by_sucursal($id_sucursal, 'todos');
 
         $this->load->view('layouts/header');
         $this->load->view('layouts/sidebar');
@@ -32,7 +35,10 @@ class Productos extends CI_Controller {
     // Vista del formulario de nuevo producto
     public function nuevo() {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $data['licores'] = $this->Producto_model->get_licores_sucursal($id_sucursal);
+        $data['licores']             = $this->Producto_model->get_licores_sucursal($id_sucursal);
+        $data['insumos_disponibles'] = $this->Receta_model->get_insumos_disponibles($id_sucursal);
+        $data['categorias']          = $this->Categoria_model->get_todas();
+        
         $this->load->view('layouts/header');
         $this->load->view('layouts/sidebar');
         $this->load->view('productos/nuevo', $data);
@@ -47,12 +53,22 @@ public function guardar() {
         $tipo = 'produccion';
     }
 
+    // tiene_receta: viene del checkbox (solo tipo produccion puede ser compuesto)
+    $tiene_receta = ($this->input->post('tiene_receta') == '1') ? 1 : 0;
+    $id_categoria = $this->input->post('id_categoria');
+    
+    // Obtener comportamiento de la categoría
+    $cat = $this->Categoria_model->get_por_id($id_categoria);
+    $tipo = $cat ? $cat->comportamiento : 'produccion';
+
     $data = [
         'codigo_barras' => $this->input->post('codigo_barras'),
         'nombre'        => $this->input->post('nombre'),
         'descripcion'   => $this->input->post('descripcion'),
-        'categoria'     => $this->input->post('categoria'),
+        'categoria'     => $this->input->post('categoria'), // mantiene campo texto para subcat
+        'id_categoria'  => $id_categoria,
         'tipo_linea'    => $tipo,
+        'tiene_receta'  => $tiene_receta,
         'precio_compra' => $this->input->post('precio_compra'),
         'precio_venta'  => $this->input->post('precio_venta'),
         'stock_minimo'  => $this->input->post('stock_minimo'),
@@ -184,6 +200,24 @@ public function guardar() {
         }
 
         $this->session->set_flashdata('success', 'Producto registrado correctamente');
+
+        // Si es producto compuesto, guardar los ingredientes enviados desde el form
+        if ($tiene_receta && $id_producto) {
+            $insumos_ids      = $this->input->post('insumos_id')      ?? [];
+            $insumos_cant     = $this->input->post('insumos_cantidad') ?? [];
+            $insumos_unidades = $this->input->post('insumos_unidad')   ?? [];
+
+            if (!empty($insumos_ids) && is_array($insumos_ids)) {
+                foreach ($insumos_ids as $i => $id_insumo) {
+                    $id_insumo = (int) $id_insumo;
+                    $cantidad  = isset($insumos_cant[$i]) ? (float) $insumos_cant[$i] : 0;
+                    $unidad    = isset($insumos_unidades[$i]) ? trim($insumos_unidades[$i]) : null;
+                    if ($id_insumo > 0 && $cantidad > 0) {
+                        $this->Receta_model->agregar_insumo($id_producto, $id_insumo, $cantidad, $unidad ?: null);
+                    }
+                }
+            }
+        }
     } else {
         $this->session->set_flashdata('error', 'Error al registrar el producto');
     }
@@ -200,7 +234,11 @@ public function guardar() {
             show_404();
         }
 
-        $data['licores'] = $this->Producto_model->get_licores_sucursal($id_sucursal);
+        $data['licores']             = $this->Producto_model->get_licores_sucursal($id_sucursal);
+        $data['receta']              = $this->Receta_model->get_receta($id);
+        $data['insumos_disponibles'] = $this->Receta_model->get_insumos_disponibles($id_sucursal, $id);
+        $data['categorias']          = $this->Categoria_model->get_todas();
+
         $this->load->view('layouts/header');
         $this->load->view('layouts/sidebar');
         $this->load->view('productos/editar', $data);
@@ -229,24 +267,35 @@ public function guardar() {
         redirect('productos');
     }
     
-public function actualizar($id) {
-    $id_sucursal = $this->session->userdata('id_sucursal');
-    $actual = $this->Producto_model->get_producto($id, $id_sucursal);
-    if (!$actual) {
-        show_404();
-    }
+    public function actualizar($id = null) {
+        if (!$id) {
+            $id = $this->input->post('id');
+        }
+        
+        if (!$id) {
+            redirect('productos');
+        }
 
-    $tipo = $this->input->post('tipo_linea') ?: ($actual->tipo_linea ?? 'produccion');
-    if (!in_array($tipo, ['produccion', 'licores', 'cocteles'], true)) {
-        $tipo = 'produccion';
-    }
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $actual = $this->Producto_model->get_producto($id, $id_sucursal);
+        if (!$actual) {
+            show_404();
+        }
+
+    $id_categoria = $this->input->post('id_categoria');
+    $cat = $this->Categoria_model->get_por_id($id_categoria);
+    $tipo = $cat ? $cat->comportamiento : ($actual->tipo_linea ?? 'produccion');
+
+    $tiene_receta = ($this->input->post('tiene_receta') == '1') ? 1 : 0;
 
     $data = [
         'codigo_barras' => $this->input->post('codigo_barras'),
         'nombre'        => $this->input->post('nombre'),
         'descripcion'   => $this->input->post('descripcion'),
         'categoria'     => $this->input->post('categoria'),
+        'id_categoria'  => $id_categoria,
         'tipo_linea'    => $tipo,
+        'tiene_receta'  => $tiene_receta,
         'precio_compra' => $this->input->post('precio_compra'),
         'precio_venta'  => $this->input->post('precio_venta'),
         'stock_minimo'  => $this->input->post('stock_minimo')
@@ -344,7 +393,38 @@ public function actualizar($id) {
         }
     }
 
-    if ($this->Producto_model->actualizar($id, $id_sucursal, $data)) {
+        // Sincronización inteligente de receta: Si envió insumos, forzamos tiene_receta = 1
+        $insumos_id = $this->input->post('insumos_id');
+        if (!empty($insumos_id) && count($insumos_id) > 0) {
+            $data['tiene_receta'] = 1;
+        }
+
+        if ($this->Producto_model->actualizar($id, $id_sucursal, $data)) {
+            
+            // --- SINCRONIZACIÓN DE RECETA ---
+            // Usamos $data['tiene_receta'] recien validado
+            if ($data['tiene_receta'] == 1) {
+                // 1. Borrar receta anterior
+                $this->Receta_model->eliminar_receta($id);
+
+                // 2. Insertar nueva lista
+                $insumos_cantidad = $this->input->post('insumos_cantidad');
+                $insumos_unidad   = $this->input->post('insumos_unidad');
+
+                if (!empty($insumos_id)) {
+                    foreach ($insumos_id as $key => $iid) {
+                        $cant = (float) $insumos_cantidad[$key];
+                        $uni  = $insumos_unidad[$key];
+                        if ($iid > 0 && $cant > 0) {
+                            $this->Receta_model->agregar_insumo($id, $iid, $cant, $uni ?: null);
+                        }
+                    }
+                }
+            } else {
+                // Si se desactivó la receta o no tiene insumos, limpiamos
+                $this->Receta_model->eliminar_receta($id);
+            }
+
         $this->session->set_flashdata('success', 'Producto actualizado correctamente');
     } else {
         $this->session->set_flashdata('error', 'Error al guardar en la base de datos');
@@ -352,4 +432,88 @@ public function actualizar($id) {
 
     redirect('productos');
 }
-}
+
+    // ─── GESTIÓN DE RECETAS ─────────────────────────────────────────────────
+
+    /**
+     * Agrega un insumo a la receta de un producto (via form POST desde editar).
+     */
+    public function agregar_insumo_receta($id_producto)
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $prod = $this->Producto_model->get_producto($id_producto, $id_sucursal);
+        if (!$prod || !$prod->tiene_receta) {
+            $this->session->set_flashdata('error', 'Producto no válido o no tiene receta activada.');
+            redirect('productos/editar/' . $id_producto);
+            return;
+        }
+
+        $id_insumo = (int) $this->input->post('id_insumo');
+        $cantidad  = (float) $this->input->post('cantidad');
+        $unidad    = trim($this->input->post('unidad'));
+
+        if ($id_insumo < 1 || $cantidad <= 0) {
+            $this->session->set_flashdata('error', 'Selecciona un insumo válido y una cantidad mayor a 0.');
+            redirect('productos/editar/' . $id_producto);
+            return;
+        }
+
+        $insumo = $this->Producto_model->get_producto($id_insumo, $id_sucursal);
+        if (!$insumo) {
+            $this->session->set_flashdata('error', 'El insumo seleccionado no existe en esta sucursal.');
+            redirect('productos/editar/' . $id_producto);
+            return;
+        }
+
+        $this->Receta_model->agregar_insumo($id_producto, $id_insumo, $cantidad, $unidad ?: null);
+        $this->session->set_flashdata('success', 'Insumo agregado a la receta correctamente.');
+        redirect('productos/editar/' . $id_producto . '#receta');
+    }
+
+    /**
+     * Elimina un ingrediente específico de la receta.
+     */
+    public function eliminar_insumo_receta($id_fila)
+    {
+        $fila = $this->db->get_where('producto_receta', ['id' => (int) $id_fila])->row();
+        $id_producto = $fila ? $fila->id_producto : 0;
+        $this->Receta_model->eliminar_insumo($id_fila);
+        $this->session->set_flashdata('success', 'Insumo eliminado de la receta.');
+        redirect('productos/editar/' . $id_producto . '#receta');
+    }
+    // --- GESTIÓN DE CATEGORÍAS (AJAX) ---
+
+    public function get_categorias_json() {
+        echo json_encode($this->Categoria_model->get_todas(false));
+    }
+
+    public function guardar_categoria_ajax() {
+        $id = $this->input->post('id');
+        $data = [
+            'nombre'         => $this->input->post('nombre'),
+            'icono'          => $this->input->post('icono') ?: 'fa-tag',
+            'color'          => $this->input->post('color') ?: 'blue',
+            'comportamiento' => $this->input->post('comportamiento') ?: 'produccion',
+            'orden'          => (int) $this->input->post('orden')
+        ];
+
+        // Validamos que el ID sea numérico y mayor a 0 para considerar edición
+        if (is_numeric($id) && (int)$id > 0) {
+            $res = $this->Categoria_model->actualizar($id, $data);
+        } else {
+            $res = $this->Categoria_model->insertar($data);
+        }
+        echo json_encode(['success' => (bool)$res]);
+    }
+
+    public function eliminar_categoria_ajax() {
+        $id = $this->input->post('id');
+        // No permitir borrar las 3 primeras por seguridad (son las base)
+        if (in_array((int)$id, [1, 2, 3])) {
+            echo json_encode(['success' => false, 'error' => 'No se pueden eliminar las categorías base del sistema.']);
+            return;
+        }
+        $res = $this->Categoria_model->eliminar($id);
+        echo json_encode(['success' => (bool)$res]);
+    }
+}

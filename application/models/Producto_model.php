@@ -4,21 +4,36 @@ class Producto_model extends CI_Model {
     /**
      * @param string|null $filtro_tipo 'todos' | 'produccion' | 'licores' | 'cocteles'
      */
-    public function get_productos_by_sucursal($id_sucursal, $filtro_tipo = null) {
-        $this->db->where('id_sucursal', $id_sucursal);
-        if ($filtro_tipo && $filtro_tipo !== 'todos' && in_array($filtro_tipo, ['produccion', 'licores', 'cocteles'], true)) {
-            $this->db->where('tipo_linea', $filtro_tipo);
+    public function get_productos_by_sucursal($id_sucursal, $filtro_tipo = 'todos') {
+        $this->db->select('p.*, c.nombre as categoria_nombre, c.icono as categoria_icono, c.color as categoria_color, c.comportamiento as behavior');
+        $this->db->from('productos p');
+        $this->db->join('categorias c', 'c.id = p.id_categoria', 'left');
+        $this->db->where('p.id_sucursal', $id_sucursal);
+
+        if ($filtro_tipo && $filtro_tipo !== 'todos') {
+            if (is_numeric($filtro_tipo)) {
+                $this->db->where('p.id_categoria', (int) $filtro_tipo);
+            } else {
+                // Compatibilidad por si se pasa el slug/tipo_linea
+                $this->db->where('p.tipo_linea', $filtro_tipo);
+            }
         }
-        $this->db->order_by('nombre', 'ASC');
-        return $this->db->get('productos')->result();
+
+        $this->db->order_by('p.nombre', 'ASC');
+        return $this->db->get()->result();
     }
 
     /** Cantidad de productos por línea (para badges en pestañas). */
     public function conteos_por_tipo($id_sucursal) {
-        $out = ['todos' => 0, 'produccion' => 0, 'licores' => 0, 'cocteles' => 0];
-        $out['todos'] = (int) $this->db->where('id_sucursal', $id_sucursal)->count_all_results('productos');
-        foreach (['produccion', 'licores', 'cocteles'] as $t) {
-            $out[$t] = (int) $this->db->where('id_sucursal', $id_sucursal)->where('tipo_linea', $t)->count_all_results('productos');
+        $this->load->model('Categoria_model');
+        $categorias = $this->Categoria_model->get_todas();
+        
+        $out = ['todos' => (int) $this->db->where('id_sucursal', $id_sucursal)->count_all_results('productos')];
+        
+        foreach ($categorias as $cat) {
+            $out[$cat->id] = (int) $this->db->where('id_sucursal', $id_sucursal)
+                                            ->where('id_categoria', $cat->id)
+                                            ->count_all_results('productos');
         }
         return $out;
     }

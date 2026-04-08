@@ -197,6 +197,7 @@ class Ventas extends CI_Controller {
                 $tipo = isset($prod->tipo_linea) ? $prod->tipo_linea : 'produccion';
                 
                 if ($tipo === 'cocteles') {
+                    // ── Lógica especial para cócteles (sin cambios) ──────────────────
                     $licor = $this->Producto_model->get_producto($prod->id_licor_base, $id_sucursal);
                     if (!$licor) {
                         $this->db->trans_rollback();
@@ -219,7 +220,48 @@ class Ventas extends CI_Controller {
                         'stock_resultante' => $repo_res,
                         'fecha'            => date('Y-m-d H:i:s')
                     ]);
+
+                } elseif (!empty($prod->tiene_receta)) {
+                    // ── Producto COMPUESTO: descuenta sus insumos de la receta ────────
+                    $this->load->model('Receta_model');
+                    $res_receta = $this->Receta_model->descontar_insumos(
+                        $id_producto,
+                        $cantidad,
+                        $id_sucursal,
+                        $id_venta_final,
+                        $prod->nombre
+                    );
+                    if (!$res_receta['ok']) {
+                        $this->db->trans_rollback();
+                        return $this->output->set_content_type('application/json')->set_output(json_encode(['success' => false, 'message' => $res_receta['message']]));
+                    }
+
+                    // --- NUEVO: También descontar stock del producto final ---
+                    $this->db->query(
+                        "UPDATE productos SET stock = stock - ? WHERE id = ? AND id_sucursal = ?",
+                        [$cantidad, $id_producto, $id_sucursal]
+                    );
+                    $stock_actual = $this->db->query(
+                        "SELECT stock FROM productos WHERE id = ? AND id_sucursal = ?",
+                        [$id_producto, $id_sucursal]
+                    )->row()->stock;
+
+                    // Registrar en kardex la salida del producto compuesto
+                    $this->db->insert('kardex', [
+                        'id_sucursal'      => $id_sucursal,
+                        'id_producto'      => $id_producto,
+                        'tipo_movimiento'  => 'Salida',
+                        'motivo'           => 'Venta',
+                        'doc_tipo'         => 'Venta',
+                        'doc_id'           => $id_venta_final,
+                        'cantidad'         => $cantidad,
+                        'stock_resultante' => $stock_actual,
+                        'nota'             => 'Producto compuesto — Ins. descontados',
+                        'fecha'            => date('Y-m-d H:i:s')
+                    ]);
+
                 } else {
+                    // ── Producto SIMPLE: descuenta su propio stock (comportamiento original) ──
                     if ((float) $prod->stock < $cantidad) {
                         $this->db->trans_rollback();
                         return $this->output->set_content_type('application/json')->set_output(json_encode(['success' => false, 'message' => 'Stock insuficiente para: ' . $prod->nombre]));
@@ -521,5 +563,40 @@ class Ventas extends CI_Controller {
     $this->load->view('layouts/footer');
 }
 
-    
-}
+
+    /**
+     * Devuelve (vía AJAX) los insumos descontados del kardex para una venta concreta.
+     */
+    public function detalle_insumos_venta($id_venta)
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+
+        // Productos compuestos de esa venta
+        $compuestos = $this->db->query("
+            SELECT vd.id_producto, vd.cantidad, p.nombre AS prod_compuesto
+            FROM venta_detalles vd
+            JOIN productos p ON p.id = vd.id_producto
+            WHERE vd.id_venta = ? AND p.tiene_receta = 1
+        ", [$id_venta])->result();
+
+        // Insumos descontados en el kardex para esa venta
+        $insumos = $this->db->query("
+            SELECT k.id_producto, k.cantidad, k.stock_resultante, k.nota, p.nombre AS insumo_nombre
+            FROM kardex k
+            JOIN productos p ON p.id = k.id_producto
+            WHERE k.doc_id = ? AND k.doc_tipo = 'Venta'
+              AND k.id_sucursal = ?
+              AND k.nota LIKE 'Insumo de:%'
+            ORDER BY k.id ASC
+        ", [$id_venta, $id_sucursal])->result();
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'compuestos' => $compuestos,
+                'insumos'    => $insumos
+            ]));
+    }
+
+}

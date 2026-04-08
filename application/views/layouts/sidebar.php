@@ -97,6 +97,12 @@
         .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 
+    <?php 
+    // Lógica para detectar página actual
+    $segment_1 = $this->uri->segment(1);
+    $segment_2 = $this->uri->segment(2);
+    ?>
+
     <div class="sidebar">
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
@@ -104,28 +110,28 @@
                 <li class="nav-header">PRINCIPAL</li>
                 
                 <li class="nav-item">
-                    <a href="<?= base_url('ventas/pos') ?>" class="nav-link">
+                    <a href="<?= base_url('ventas/pos') ?>" class="nav-link <?= ($segment_1 == 'ventas' && $segment_2 == 'pos') ? 'active' : '' ?>">
                         <i class="fas fa-cash-register"></i>
                         <p>Punto de Venta</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('mesas') ?>" class="nav-link">
+                    <a href="<?= base_url('mesas') ?>" class="nav-link <?= ($segment_1 == 'mesas') ? 'active' : '' ?>">
                         <i class="fas fa-th"></i>
                         <p>Mesas y salón</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('clientes/cliente_index') ?>" class="nav-link">
+                    <a href="<?= base_url('clientes/cliente_index') ?>" class="nav-link <?= ($segment_1 == 'clientes') ? 'active' : '' ?>">
                         <i class="fas fa-user-friends"></i>
                         <p>Clientes</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('proveedores/proveedor_index') ?>" class="nav-link">
+                    <a href="<?= base_url('proveedores/proveedor_index') ?>" class="nav-link <?= ($segment_1 == 'proveedores') ? 'active' : '' ?>">
                         <i class="fas fa-truck-loading"></i>
                         <p>Proveedores</p>
                     </a>
@@ -135,35 +141,35 @@
                 <li class="nav-header">ADMINISTRACIÓN</li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('ventas/venta_index') ?>" class="nav-link">
+                    <a href="<?= base_url('ventas/venta_index') ?>" class="nav-link <?= ($segment_1 == 'ventas' && $segment_2 == 'venta_index') ? 'active' : '' ?>">
                         <i class="fas fa-chart-bar"></i>
                         <p>Ventas Realizadas</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('compras/compras_index') ?>" class="nav-link">
+                    <a href="<?= base_url('compras/compras_index') ?>" class="nav-link <?= ($segment_1 == 'compras') ? 'active' : '' ?>">
                         <i class="fas fa-shopping-basket"></i>
                         <p>Compras e Inventario</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('almacen/stock_index') ?>" class="nav-link">
+                    <a href="<?= base_url('almacen/stock_index') ?>" class="nav-link <?= ($segment_1 == 'almacen') ? 'active' : '' ?>">
                         <i class="fas fa-layer-group"></i>
                         <p>Stock Almacén</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('productos') ?>" class="nav-link">
+                    <a href="<?= base_url('productos') ?>" class="nav-link <?= ($segment_1 == 'productos') ? 'active' : '' ?>">
                         <i class="fas fa-tags"></i> 
                         <p>Gestión Productos</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="<?= base_url('caja') ?>" class="nav-link">
+                    <a href="<?= base_url('caja') ?>" class="nav-link <?= ($segment_1 == 'caja') ? 'active' : '' ?>">
                         <i class="fas fa-vault"></i>
                         <p>Control de Cajas</p>
                     </a>
@@ -173,7 +179,7 @@
                 <?php if ($this->session->userdata('rol') == 'vendedor'): ?>
                 <li class="nav-header">COTIZACIONES</li>
                 <li class="nav-item">
-                    <a href="<?= base_url('ventas_bolivia/nueva_cotizacion') ?>" class="nav-link">
+                    <a href="<?= base_url('ventas_bolivia/nueva_cotizacion') ?>" class="nav-link <?= ($segment_1 == 'ventas_bolivia') ? 'active' : '' ?>">
                         <i class="fas fa-file-invoice"></i> 
                         <p>Nueva Cotización</p>
                     </a>

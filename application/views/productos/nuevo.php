@@ -1,236 +1,283 @@
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-<script src="https://unpkg.com/@ericblade/quagga2@latest/dist/quagga.min.js"></script>
-<div class="md:ml-64 min-h-screen bg-slate-50 transition-all duration-300 pt-16 md:pt-0">
-    <div class="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto">
-        
-        <div class="mb-8">
-            <a href="<?= base_url('productos') ?>" class="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center mb-4">
-                <i class="fas fa-arrow-left mr-2"></i> Volver al listado
-            </a>
-            <h1 class="text-3xl font-black text-slate-800">Registrar Nuevo Producto</h1>
-            <p class="text-slate-500">Los datos se guardarán exclusivamente en sucursal: <span class="font-bold text-slate-700"><?= $this->session->userdata('sucursal_nombre') ?></span></p>
-        </div>
+<?php
+$behavior_map = [];
+if (!empty($categorias)) {
+    foreach ($categorias as $cat) { $behavior_map[$cat->id] = $cat->comportamiento; }
+}
 
-<form action="<?= base_url('productos/guardar') ?>" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-3 gap-8" x-data="{ tipo: 'produccion' }">
-    
-    <div class="md:col-span-2 space-y-6">
-        <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex flex-col gap-2" x-data="barcodeScanner()">
-                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Código de Barras</label>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <div class="relative flex-1">
-                            <input type="text" name="codigo_barras" x-model="codigo" required autofocus 
-                                placeholder="Escriba el código..."
-                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-mono">
-                            <template x-if="codigo">
-                                <button @click="codigo = ''" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                                    <i class="fas fa-times-circle"></i>
-                                </button>
-                            </template>
+$insumos_json = [];
+if (!empty($insumos_disponibles)) {
+    foreach ($insumos_disponibles as $ins) {
+        $insumos_json[] = [ 'id' => (int)$ins->id, 'nombre' => $ins->nombre, 'stock' => (float)$ins->stock ];
+    }
+}
+?>
+
+<div class="md:ml-64 min-h-screen bg-slate-50 transition-all duration-300 pt-16 md:pt-0"
+     x-data="{
+        id_categoria: '',
+        behaviors: <?= htmlspecialchars(json_encode($behavior_map), ENT_QUOTES, 'UTF-8') ?>,
+        get tipo() { return this.behaviors[this.id_categoria] || 'produccion'; },
+        tieneReceta: false,
+        ingredientes: [],
+        insumosMaster: <?= htmlspecialchars(json_encode($insumos_json), ENT_QUOTES, 'UTF-8') ?>,
+        addIngrediente() {
+            this.ingredientes.push({ id_insumo: 0, nombre: '', cantidad: 1, unidad: 'und', showSearch: false });
+        },
+        removeIngrediente(index) { this.ingredientes.splice(index, 1); },
+        selectInsumo(index, insumo) {
+            this.ingredientes[index].id_insumo = insumo.id;
+            this.ingredientes[index].nombre = insumo.nombre;
+            this.ingredientes[index].showSearch = false;
+        }
+     }">
+
+    <div class="p-4 sm:p-5 lg:p-8 w-full max-w-[1300px] mx-auto space-y-6">
+        
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <nav class="flex items-center gap-2 text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">
+                    <a href="<?= base_url('productos') ?>">Catálogo</a>
+                    <i class="fas fa-chevron-right text-[7px] opacity-30"></i>
+                    <span>Nuevo Registro</span>
+                </nav>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">Agregar <span class="text-blue-600">Nuevo Producto</span></h1>
+            </div>
+            <a href="<?= base_url('productos') ?>" class="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest">
+                <i class="fas fa-times-circle mr-1"></i> Descartar
+            </a>
+        </header>
+
+        <form action="<?= base_url('productos/guardar') ?>" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
+            
+            <div class="lg:col-span-8 space-y-6">
+                <!-- Información General -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código o SKU</label>
+                            <input type="text" name="codigo_barras" required autofocus placeholder="Escriba código..."
+                                   class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none font-bold text-slate-700 focus:bg-white focus:border-blue-400 transition-all text-sm">
                         </div>
-                        <button type="button" @click="startScanner()" 
-                                class="md:hidden flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl active:scale-95 transition-all shadow-lg shadow-blue-500/20 w-full sm:w-auto">
-                            <i class="fas fa-camera text-lg"></i>
-                            <span class="font-bold text-sm uppercase tracking-wider">Escanear</span>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoría / Sección</label>
+                            <select name="id_categoria" x-model="id_categoria" required 
+                                    class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none font-bold text-slate-700 appearance-none focus:bg-white focus:border-blue-400 transition-all text-sm">
+                                <option value="">— SELECCIONE —</option>
+                                <?php foreach ($categorias as $cat): ?>
+                                    <option value="<?= $cat->id ?>"><?= htmlspecialchars($cat->nombre) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre Comercial</label>
+                        <input type="text" name="nombre" required placeholder="Ej: Pizza Americana Doble Queso"
+                               class="w-full px-4 py-3 bg-slate-900 border-none rounded-xl outline-none font-black text-white text-base shadow-inner focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción</label>
+                        <textarea name="descripcion" rows="2" placeholder="Información opcional para la venta..."
+                                  class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none font-medium text-slate-600 focus:bg-white focus:border-blue-400 transition-all text-sm"></textarea>
+                    </div>
+
+                    <!-- Configuración Licores -->
+                    <div x-show="tipo === 'cocteles'" x-cloak x-transition class="p-4 rounded-xl border border-amber-100 bg-amber-50/50 space-y-4">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-cocktail text-amber-500"></i>
+                            <h3 class="font-black text-amber-900 uppercase text-[10px]">Ajustes de Barra</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-amber-800/40 uppercase tracking-widest ml-1">Licor de Origen</label>
+                                <select name="id_licor_base" class="w-full px-4 py-2 bg-white border border-amber-200 rounded-xl outline-none font-bold text-xs">
+                                    <option value="">— NO ASIGNADO —</option>
+                                    <?php if (!empty($licores)): foreach ($licores as $l): ?>
+                                        <option value="<?= $l->id ?>"><?= htmlspecialchars($l->nombre) ?></option>
+                                    <?php endforeach; endif; ?>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-amber-800/40 uppercase tracking-widest ml-1">Rendimiento</label>
+                                <input type="number" name="ventas_por_botella" value="1" min="1" class="w-full px-4 py-2 bg-white border border-amber-200 rounded-xl outline-none font-black text-xs text-center">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Checkbox Receta -->
+                    <div x-show="tipo === 'produccion'" x-cloak x-transition
+                         class="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all"
+                         :class="tieneReceta ? 'border-violet-300 bg-violet-50/30' : ''">
+                        <label class="flex items-center gap-4 cursor-pointer select-none">
+                            <div class="relative flex items-center justify-center">
+                                <input type="checkbox" name="tiene_receta" value="1" x-model="tieneReceta" class="sr-only">
+                                <div class="w-8 h-8 rounded-lg border-2 transition-all duration-300 flex items-center justify-center shadow-sm"
+                                     :class="tieneReceta ? 'bg-violet-600 border-violet-600' : 'bg-white border-slate-200'">
+                                    <svg x-show="tieneReceta" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-sm font-black text-violet-900 block leading-tight">Activar Receta Automática</span>
+                                <p class="text-[9px] text-violet-700/60 font-black uppercase tracking-widest mt-0.5">Descuenta insumos dinámicamente</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- TABLA DE RECETA: CORRECCIÓN DE VISIBILIDAD -->
+                <div x-show="tieneReceta" x-cloak x-transition:enter="transition duration-300" 
+                     class="bg-white border border-slate-200 rounded-2xl shadow-sm z-20 relative overflow-visible">
+                    <div class="px-6 py-4 bg-violet-700 text-white flex items-center justify-between rounded-t-2xl">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-layer-group opacity-60"></i>
+                            <h3 class="text-xs font-black uppercase tracking-widest">Composición</h3>
+                        </div>
+                        <button type="button" @click="addIngrediente()" 
+                                class="px-4 py-2 bg-white text-violet-700 hover:bg-violet-50 rounded-xl font-black text-[10px] uppercase shadow-sm transition-all">
+                            + Insumo
                         </button>
                     </div>
-                    </div>
-
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Línea de negocio</label>
-                    <select name="tipo_linea" x-model="tipo" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-slate-700">
-                        <option value="produccion">Producción (comidas, salchipapas, etc.)</option>
-                        <option value="licores">Licores (botellas enteras)</option>
-                        <option value="cocteles">Cócteles (bar — usan licor del repositorio)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Etiqueta / subcategoría <span class="text-slate-300 font-normal normal-case">(opcional)</span></label>
-                <input type="text" name="categoria" placeholder="Ej. salchipapas, cerveza artesanal…" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all">
-            </div>
-
-            <div x-show="tipo === 'cocteles'" x-cloak class="rounded-xl border border-amber-200 bg-amber-50/80 p-5 space-y-4">
-                <p class="text-xs text-amber-900 leading-relaxed">
-                    Cada cóctel lleva un <strong>repositorio de bar</strong> (hasta 5 botellas por defecto). Por cada <strong>10 ventas</strong> (ajustable) se descuenta <strong>1 botella solo del bar</strong>. El <strong>stock del licor en almacén</strong> baja cuando <strong>repones</strong> el bar (pasas botellas del almacén al bar), no en cada venta.
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-black text-amber-800 uppercase tracking-widest">Botella de licor base *</label>
-                        <select name="id_licor_base" class="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl outline-none">
-                            <option value="">— Seleccionar —</option>
-                            <?php if (!empty($licores)): foreach ($licores as $l): ?>
-                                <option value="<?= (int) $l->id ?>"><?= htmlspecialchars($l->nombre) ?> (Stock alm. <?= number_format($l->stock, 0) ?>)</option>
-                            <?php endforeach; else: ?>
-                            <?php endif; ?>
-                        </select>
-                        <?php if (empty($licores)): ?>
-                            <p class="text-[10px] text-red-600 font-bold">Primero registra productos en línea <strong>Licores</strong>.</p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-black text-amber-800 uppercase tracking-widest">Ventas por 1 botella</label>
-                        <input type="number" name="ventas_por_botella" value="10" min="1" max="1000" class="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl outline-none" title="Ej. 10 cócteles = 1 botella">
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-black text-amber-800 uppercase tracking-widest">Máx. botellas en bar</label>
-                        <input type="number" name="max_repositorio_botellas" value="5" min="1" max="50" class="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl outline-none">
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-black text-amber-800 uppercase tracking-widest">Botellas iniciales en bar</label>
-                        <input type="number" name="repositorio_inicial" value="0" min="0" step="1" class="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl outline-none" title="Se descuentan del stock del licor elegido">
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Nombre del Producto</label>
-                <input type="text" name="nombre" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all">
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Descripción</label>
-                <textarea name="descripcion" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"></textarea>
-            </div>
-        </div>
-    </div>
-
-    <div class="space-y-6">
-        
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" x-data="imagePreview()">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block text-center">Imagen del Producto</label>
-            
-            <div class="relative group">
-                <input type="file" name="imagen" accept="image/*" capture="environment" 
-                    class="hidden" x-ref="imageInput" @change="updatePreview">
-                
-                <div @click="$refs.imageInput.click()" 
-                    class="w-full aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all hover:border-blue-400 hover:bg-blue-50/30 cursor-pointer relative">
                     
-                    <template x-if="url">
-                        <img :src="url" class="w-full h-full object-cover">
-                    </template>
-
-                    <template x-if="!url">
-                        <div class="text-center p-4">
-                            <i class="fas fa-image text-4xl text-slate-200 mb-3"></i>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Click para Foto o Archivo</p>
+                    <div class="p-3">
+                        <div class="overflow-x-visible">
+                            <table class="w-full border-separate border-spacing-y-2 min-w-[600px]">
+                                <thead>
+                                    <tr class="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">
+                                        <th class="px-4 py-1 text-left">Insumo</th>
+                                        <th class="px-2 py-1 text-center w-24">Cantidad</th>
+                                        <th class="px-2 py-1 text-center w-24">Medida</th>
+                                        <th class="px-4 py-1 w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(ing, index) in ingredientes" :key="index">
+                                        <tr class="group animate-in fade-in duration-300">
+                                            <td class="relative">
+                                                <input type="hidden" name="insumos_id[]" x-model="ing.id_insumo">
+                                                <div class="relative flex items-center">
+                                                    <i class="fas fa-search absolute left-4 text-slate-300 text-[10px]"></i>
+                                                    <input type="text" x-model="ing.nombre" @input="ing.showSearch = true; ing.id_insumo = 0" @click="ing.showSearch = true"
+                                                           placeholder="Buscar insumo..."
+                                                           class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl outline-none font-bold text-slate-700 focus:bg-white focus:border-violet-400 transition-all text-xs">
+                                                </div>
+                                                
+                                                <!-- Dropdown PREMIUM (FIXED VISIBILITY) -->
+                                                <div x-show="ing.showSearch" @click.away="ing.showSearch = false"
+                                                     class="absolute z-[999] left-0 md:left-4 w-full md:w-[150%] mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] overflow-hidden max-h-56 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                                                    <div class="p-2 bg-slate-50 border-b border-slate-100 text-[8px] font-black text-slate-400 uppercase flex justify-between">
+                                                        <span>Resultados del Almacén</span>
+                                                        <i class="fas fa-boxes opacity-20"></i>
+                                                    </div>
+                                                    <template x-for="master in insumosMaster.filter(i => i.nombre.toLowerCase().includes((ing.nombre || '').toLowerCase()))">
+                                                        <div @click="selectInsumo(index, master)" 
+                                                             class="px-5 py-3 hover:bg-violet-600 hover:text-white cursor-pointer transition-all border-b border-slate-50 last:border-0 group/item">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-[11px] font-bold uppercase" x-text="master.nombre"></div>
+                                                                <span class="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-500 group-hover/item:bg-white/20 group-hover/item:text-white shadow-sm" x-text="master.stock"></span>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                    <div x-show="insumosMaster.filter(i => i.nombre.toLowerCase().includes((ing.nombre || '').toLowerCase())).length === 0" 
+                                                         class="p-10 text-center text-slate-300 italic text-[10px]">No hay coincidencias</div>
+                                                </div>
+                                            </td>
+                                            <td class="px-1 text-center">
+                                                <input type="number" name="insumos_cantidad[]" x-model="ing.cantidad" step="0.001" 
+                                                       class="w-full py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-center font-black text-sm text-violet-700 focus:bg-white focus:border-violet-300">
+                                            </td>
+                                            <td class="px-1 text-center">
+                                                <input type="text" name="insumos_unidad[]" x-model="ing.unidad" placeholder="KM"
+                                                       class="w-full py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-center font-black text-[10px] uppercase text-slate-400 focus:bg-white focus:border-violet-300">
+                                            </td>
+                                            <td class="text-right px-2">
+                                                <button type="button" @click="removeIngrediente(index)" class="text-red-300 hover:text-red-500 transition-colors">
+                                                    <i class="fas fa-trash-alt text-xs"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
-                    </template>
-                </div>
-
-                <template x-if="url">
-                    <button type="button" @click="url = null; $refs.imageInput.value = ''" 
-                        class="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center hover:bg-red-600 transition-colors">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </template>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 p-8 rounded-2xl shadow-xl shadow-slate-200 space-y-6">
-            <h3 class="text-white font-bold text-sm uppercase tracking-widest border-b border-white/10 pb-4">Inventario y Precios</h3>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Precio Compra</label>
-                    <input type="number" name="precio_compra" step="0.01" class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:bg-white/20 transition-all">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase text-blue-400">Precio Venta Público</label>
-                    <input type="number" name="precio_venta" step="0.01" required class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:bg-white/20 transition-all text-xl font-black">
-                </div>
-                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/10" x-show="tipo !== 'cocteles'">
-                    <div class="col-span-2 sm:col-span-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Stock Inicial</label>
-                        <input type="number" name="stock" value="0" class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:bg-white/20 transition-all font-bold">
                     </div>
                 </div>
-                <div class="pt-4 border-t border-white/10">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Stock mínimo (alertas)</label>
-                    <input type="number" name="stock_minimo" value="5" class="w-full max-w-xs bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:bg-white/20 transition-all font-bold">
-                </div>
-                <p x-show="tipo === 'cocteles'" class="text-[10px] text-slate-400 pt-2" x-cloak>Los cócteles no usan stock clásico: vendes contra el bar; el almacén del licor solo se mueve al reponer.</p>
             </div>
 
-            <button type="submit" class="w-full py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-black uppercase tracking-widest transition-all transform active:scale-95 shadow-lg shadow-blue-500/20">
-                Guardar Productos
-            </button>
-        </div>
-    </div>
-</form>
+            <!-- Bloque Derecho -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Multimedia Compacto -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4" x-data="imagePreview()">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Presentación</h3>
+                    <div class="relative aspect-video rounded-xl bg-slate-50 border-2 border-dashed border-slate-100 overflow-hidden group transition-all hover:border-blue-300">
+                        <template x-if="preview">
+                            <img :src="preview" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!preview">
+                            <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center group-hover:bg-blue-50/20 transition-colors">
+                                <i class="fas fa-camera text-2xl text-slate-200 mb-2"></i>
+                                <span class="text-[9px] font-black text-slate-300 uppercase">Subir Foto</span>
+                            </div>
+                        </template>
+                        <input type="file" name="imagen" class="absolute inset-0 opacity-0 cursor-pointer" @change="onFileChange">
+                    </div>
+                </div>
+
+                <!-- Control Contable -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precios y Stock</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo de Compra (S/)</label>
+                            <input type="number" name="precio_compra" step="0.01" value="0.00" 
+                                   class="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-600 text-center focus:bg-white transition-all text-sm">
+                        </div>
+
+                        <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-blue-50/50 border border-blue-100 shadow-sm shadow-blue-500/5">
+                            <label class="text-[9px] font-black text-blue-600 uppercase tracking-widest ml-2">P. Venta Público (S/)</label>
+                            <input type="number" name="precio_venta" step="0.01" value="0.00" 
+                                   class="w-full px-4 py-1.5 bg-transparent border-none font-black text-blue-700 text-xl text-center focus:ring-0">
+                        </div>
+                    </div>
+
+                    <div x-show="tipo !== 'cocteles'" x-transition class="grid grid-cols-2 gap-3 pt-1">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Base Inicial</label>
+                            <input type="number" name="stock" value="0" step="0.01" 
+                                   class="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-800 text-center text-sm">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mínimo</label>
+                            <input type="number" name="stock_minimo" value="5" 
+                                   class="w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl font-bold text-red-500 text-center text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acción Final -->
+                <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all">
+                    Registrar Ítem
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
 
 <script>
 function imagePreview() {
     return {
-        url: null,
-        updatePreview(event) {
-            const file = event.target.files[0];
+        preview: null,
+        onFileChange(e) {
+            const file = e.target.files[0];
             if (file) {
-                this.url = URL.createObjectURL(file);
+                const reader = new FileReader();
+                reader.onload = (f) => { this.preview = f.target.result; };
+                reader.readAsDataURL(file);
             }
         }
     }
 }
-function barcodeScanner() {
-    return {
-        open: false,
-        codigo: '',
-        startScanner() {
-            this.open = true;
-            this.$nextTick(() => {
-                Quagga.init({
-                    inputStream: {
-                        name: "Live",
-                        type: "LiveStream",
-                        target: document.querySelector('#interactive'),
-                        constraints: {
-                            width: 640,
-                            height: 480,
-                            facingMode: "environment" // Usa la cámara trasera
-                        },
-                    },
-                    decoder: {
-                        readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"]
-                    }
-                }, (err) => {
-                    if (err) {
-                        console.error(err);
-                        alert("Error al iniciar cámara");
-                        return;
-                    }
-                    Quagga.start();
-                });
-
-                Quagga.onDetected((data) => {
-                    this.codigo = data.codeResult.code;
-                    this.stopScanner();
-                    // Feedback visual/sonoro
-                    if (navigator.vibrate) navigator.vibrate(100);
-                });
-            });
-        },
-        stopScanner() {
-            Quagga.stop();
-            this.open = false;
-            // Limpiar el contenido del visor para evitar que se quede pegada la última imagen
-            document.querySelector('#interactive').innerHTML = '<div class="absolute inset-0 border-[30px] border-black/30 pointer-events-none"></div><div class="absolute inset-x-6 top-1/2 h-[2px] bg-blue-500 shadow-[0_0_15px_#3b82f6] animate-pulse"></div>';
-        }
-    }
-}
 </script>
-
-<style>
-    /* Ajuste para que el video llene el contenedor */
-    #interactive video, #interactive canvas {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    [x-cloak] { display: none !important; }
-</style>

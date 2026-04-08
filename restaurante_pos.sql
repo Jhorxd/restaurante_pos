@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 04-04-2026 a las 03:49:53
+-- Tiempo de generación: 05-04-2026 a las 17:30:16
 -- Versión del servidor: 10.1.38-MariaDB
 -- Versión de PHP: 7.3.2
 
@@ -137,9 +137,46 @@ CREATE TABLE `kardex` (
 --
 
 INSERT INTO `kardex` (`id`, `id_sucursal`, `id_producto`, `tipo_movimiento`, `motivo`, `doc_tipo`, `doc_id`, `cantidad`, `stock_resultante`, `fecha`) VALUES
-(14, 1, 10, 'Salida', 'Venta', 'Venta', 9, '2.00', '5.00', '2026-03-29 06:53:23'),
-(15, 1, 10, 'Salida', 'Venta', 'Venta', 10, '3.00', '4.00', '2026-03-29 07:03:57'),
-(16, 1, 9, 'Salida', 'Venta', 'Venta', 10, '1.00', '92.00', '2026-03-29 07:03:57');
+(25, 1, 20, 'Salida', 'Venta', 'Venta', 18, '5.00', '4.00', '2026-04-05 04:09:08'),
+(26, 1, 20, 'Salida', 'Venta', 'Venta', 19, '20.00', '0.00', '2026-04-05 04:09:15'),
+(27, 1, 20, 'Salida', 'Venta', 'Venta', 20, '1.00', '5.00', '2026-04-05 04:58:02'),
+(28, 1, 21, 'Salida', 'Venta', 'Venta', 25, '2.00', '8.00', '2026-04-05 05:21:07'),
+(29, 1, 20, 'Salida', 'Venta', 'Venta', 27, '5.00', '4.00', '2026-04-05 05:26:13'),
+(30, 1, 21, 'Salida', 'Venta', 'Venta', 27, '2.00', '6.00', '2026-04-05 05:26:13'),
+(31, 1, 20, 'Salida', 'Venta', 'Venta', 28, '10.00', '2.00', '2026-04-05 17:17:36'),
+(32, 1, 20, 'Salida', 'Venta', 'Venta', 30, '5.00', '1.00', '2026-04-05 17:29:08'),
+(33, 1, 21, 'Salida', 'Venta', 'Venta', 30, '4.00', '2.00', '2026-04-05 17:29:08');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `mesas`
+--
+
+CREATE TABLE `mesas` (
+  `id` int(11) NOT NULL,
+  `id_sucursal` int(11) NOT NULL,
+  `codigo` varchar(20) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `capacidad` int(11) NOT NULL DEFAULT '4',
+  `zona` varchar(80) DEFAULT NULL,
+  `pos_orden` int(11) NOT NULL DEFAULT '0',
+  `pos_x` int(11) NOT NULL DEFAULT '0',
+  `pos_y` int(11) NOT NULL DEFAULT '0',
+  `estado` enum('libre','ocupada','reservada','limpieza') NOT NULL DEFAULT 'libre',
+  `id_venta_activa` int(11) DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
+  `notas` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Volcado de datos para la tabla `mesas`
+--
+
+INSERT INTO `mesas` (`id`, `id_sucursal`, `codigo`, `nombre`, `capacidad`, `zona`, `pos_orden`, `pos_x`, `pos_y`, `estado`, `id_venta_activa`, `activo`, `notas`) VALUES
+(1, 1, 'M01', 'MESA 01', 4, 'SALÓN', 1, 4, -5, 'libre', NULL, 1, ''),
+(2, 1, 'M02', 'MESA VENTANA', 6, 'TERRAZA', 2, 6, -4, 'libre', NULL, 1, ''),
+(3, 1, 'M03', 'MESA', 6, 'SALÓN', 3, 9, -3, 'libre', NULL, 1, '');
 
 -- --------------------------------------------------------
 
@@ -173,9 +210,9 @@ CREATE TABLE `productos` (
 --
 
 INSERT INTO `productos` (`id`, `codigo_barras`, `nombre`, `descripcion`, `categoria`, `tipo_linea`, `id_licor_base`, `repositorio_botellas`, `max_repositorio_botellas`, `ventas_por_botella`, `contador_ventas_coctel`, `precio_compra`, `precio_venta`, `stock`, `imagen`, `version`, `stock_minimo`, `id_sucursal`) VALUES
-(9, '7506306245884', 'SMIRNOFF', '', '', 'licores', NULL, '0.00', 5, 10, 0, '30.00', '50.00', '91.00', NULL, 1774758553, 0, 1),
-(10, '02092929', 'Machupichu', '', '', 'cocteles', 9, '5.00', 5, 5, 0, '15.00', '30.00', '0.00', NULL, 1774758586, 0, 1),
-(11, '12314124', 'SALCHIPAPA', '', 'SALCHIPAPA', 'produccion', NULL, '0.00', 5, 10, 0, '10.00', '25.00', '100.00', NULL, 1774759789, 0, 1);
+(19, '00000000002', 'RED LABEL', '', '', 'licores', NULL, '0.00', 5, 10, 0, '10.00', '20.00', '90.00', NULL, 1775354897, 0, 1),
+(20, '02132132132', 'COCTEL RED LABEL', '', '', 'cocteles', 19, '1.00', 5, 5, 1, '12.00', '25.00', '0.00', NULL, 1775354916, 0, 1),
+(21, '02132132132', 'SALCHIPAPA', 'SALCHIPAPA', '', 'produccion', NULL, '0.00', 5, 10, 0, '5.00', '15.00', '2.00', NULL, 1775359180, 5, 1);
 
 -- --------------------------------------------------------
 
@@ -254,36 +291,6 @@ INSERT INTO `usuarios` (`id`, `nombre`, `usuario`, `password`, `rol`, `id_sucurs
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `mesas`
---
-
-CREATE TABLE `mesas` (
-  `id` int(11) NOT NULL,
-  `id_sucursal` int(11) NOT NULL,
-  `codigo` varchar(20) NOT NULL,
-  `nombre` varchar(100) NOT NULL,
-  `capacidad` int(11) NOT NULL DEFAULT 4,
-  `zona` varchar(80) DEFAULT NULL,
-  `pos_orden` int(11) NOT NULL DEFAULT 0,
-  `pos_x` int(11) NOT NULL DEFAULT 0,
-  `pos_y` int(11) NOT NULL DEFAULT 0,
-  `estado` enum('libre','ocupada','reservada','limpieza') NOT NULL DEFAULT 'libre',
-  `activo` tinyint(1) NOT NULL DEFAULT 1,
-  `notas` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Volcado de datos para la tabla `mesas`
---
-
-INSERT INTO `mesas` (`id`, `id_sucursal`, `codigo`, `nombre`, `capacidad`, `zona`, `pos_orden`, `pos_x`, `pos_y`, `estado`, `activo`, `notas`) VALUES
-(1, 1, 'M01', 'Mesa 1', 4, 'Salón', 1, 0, 0, 'libre', 1, NULL),
-(2, 1, 'M02', 'Mesa 2', 4, 'Salón', 2, 1, 0, 'libre', 1, NULL),
-(3, 1, 'T01', 'Terraza 1', 2, 'Terraza', 3, 2, 0, 'libre', 1, NULL);
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `ventas`
 --
 
@@ -295,6 +302,7 @@ CREATE TABLE `ventas` (
   `id_caja` int(11) NOT NULL,
   `id_mesa` int(11) DEFAULT NULL,
   `total` decimal(10,2) NOT NULL,
+  `estado` enum('pendiente','pagada','anulada') DEFAULT 'pagada',
   `metodo_pago` enum('efectivo','tarjeta','yape','plin','transferencia') NOT NULL DEFAULT 'efectivo',
   `monto_recibido` decimal(10,2) DEFAULT NULL,
   `vuelto` decimal(10,2) DEFAULT NULL,
@@ -305,17 +313,20 @@ CREATE TABLE `ventas` (
 -- Volcado de datos para la tabla `ventas`
 --
 
-INSERT INTO `ventas` (`id`, `id_sucursal`, `id_usuario`, `id_cliente`, `id_caja`, `id_mesa`, `total`, `metodo_pago`, `monto_recibido`, `vuelto`, `fecha_registro`) VALUES
-(1, 1, 1, 1, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:50:20'),
-(2, 1, 1, NULL, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:52:01'),
-(3, 1, 1, NULL, 1, NULL, '10.00', 'transferencia', '10.00', '0.00', '2026-03-10 19:53:48'),
-(4, 1, 1, NULL, 1, NULL, '20.00', 'yape', '20.00', '0.00', '2026-03-10 21:08:45'),
-(5, 1, 1, NULL, 1, NULL, '20.00', 'yape', '20.00', '0.00', '2026-03-10 22:48:34'),
-(6, 1, 1, NULL, 1, NULL, '70.00', 'transferencia', '70.00', '0.00', '2026-03-12 04:49:17'),
-(7, 1, 1, NULL, 1, NULL, '30.00', 'tarjeta', '30.00', '0.00', '2026-03-29 06:30:01'),
-(8, 1, 1, NULL, 1, NULL, '120.00', 'tarjeta', '120.00', '0.00', '2026-03-29 06:30:30'),
-(9, 1, 1, NULL, 1, NULL, '60.00', 'tarjeta', '60.00', '0.00', '2026-03-29 06:53:23'),
-(10, 1, 1, NULL, 1, NULL, '90.00', 'tarjeta', '90.00', '0.00', '2026-03-29 07:03:57');
+INSERT INTO `ventas` (`id`, `id_sucursal`, `id_usuario`, `id_cliente`, `id_caja`, `id_mesa`, `total`, `estado`, `metodo_pago`, `monto_recibido`, `vuelto`, `fecha_registro`) VALUES
+(18, 1, 1, NULL, 1, NULL, '125.00', 'pagada', 'yape', '125.00', '0.00', '2026-04-05 04:09:08'),
+(19, 1, 1, NULL, 1, NULL, '500.00', 'pagada', 'yape', '500.00', '0.00', '2026-04-05 04:09:15'),
+(20, 1, 1, NULL, 1, 1, '25.00', 'pagada', 'tarjeta', '25.00', '0.00', '2026-04-05 04:58:02'),
+(21, 1, 1, NULL, 1, 1, '100.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 05:11:48'),
+(22, 1, 1, NULL, 1, 1, '20.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 05:12:24'),
+(23, 1, 1, NULL, 1, 1, '250.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 05:12:50'),
+(24, 1, 1, NULL, 1, 2, '30.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 05:19:53'),
+(25, 1, 1, NULL, 1, 2, '30.00', 'pagada', 'yape', '30.00', '0.00', '2026-04-05 05:21:07'),
+(26, 1, 1, NULL, 1, 2, '155.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 05:25:58'),
+(27, 1, 1, NULL, 1, 2, '155.00', 'pagada', 'yape', '155.00', '0.00', '2026-04-05 05:26:13'),
+(28, 1, 1, NULL, 1, 1, '250.00', 'pagada', 'yape', '250.00', '0.00', '2026-04-05 17:17:36'),
+(29, 1, 1, NULL, 1, 1, '185.00', 'pendiente', 'efectivo', '0.00', '0.00', '2026-04-05 17:28:23'),
+(30, 1, 1, NULL, 1, 1, '185.00', 'pagada', 'tarjeta', '185.00', '0.00', '2026-04-05 17:29:08');
 
 -- --------------------------------------------------------
 
@@ -337,8 +348,23 @@ CREATE TABLE `venta_detalles` (
 --
 
 INSERT INTO `venta_detalles` (`id`, `id_venta`, `id_producto`, `cantidad`, `precio_unitario`, `subtotal`) VALUES
-(9, 9, 10, '2.00', '30.00', '60.00'),
-(10, 10, 10, '3.00', '30.00', '90.00');
+(18, 18, 20, '5.00', '25.00', '125.00'),
+(19, 19, 20, '20.00', '25.00', '500.00'),
+(20, 20, 20, '1.00', '25.00', '25.00'),
+(21, 21, 20, '4.00', '25.00', '100.00'),
+(22, 22, 19, '1.00', '20.00', '20.00'),
+(23, 23, 20, '10.00', '25.00', '250.00'),
+(24, 24, 21, '2.00', '15.00', '30.00'),
+(25, 25, 21, '2.00', '15.00', '30.00'),
+(26, 26, 21, '2.00', '15.00', '30.00'),
+(27, 26, 20, '5.00', '25.00', '125.00'),
+(28, 27, 20, '5.00', '25.00', '125.00'),
+(29, 27, 21, '2.00', '15.00', '30.00'),
+(30, 28, 20, '10.00', '25.00', '250.00'),
+(33, 29, 20, '5.00', '25.00', '125.00'),
+(34, 29, 21, '4.00', '15.00', '60.00'),
+(35, 30, 20, '5.00', '25.00', '125.00'),
+(36, 30, 21, '4.00', '15.00', '60.00');
 
 --
 -- Índices para tablas volcadas
@@ -429,8 +455,8 @@ ALTER TABLE `ventas`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_sucursal` (`id_sucursal`),
   ADD KEY `id_caja` (`id_caja`),
-  ADD KEY `ventas_ibfk_mesa` (`id_mesa`),
-  ADD KEY `ventas_ibfk_cliente` (`id_cliente`);
+  ADD KEY `ventas_ibfk_cliente` (`id_cliente`),
+  ADD KEY `ventas_ibfk_mesa` (`id_mesa`);
 
 --
 -- Indices de la tabla `venta_detalles`
@@ -472,7 +498,7 @@ ALTER TABLE `compra_detalle`
 -- AUTO_INCREMENT de la tabla `kardex`
 --
 ALTER TABLE `kardex`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT de la tabla `mesas`
@@ -484,7 +510,7 @@ ALTER TABLE `mesas`
 -- AUTO_INCREMENT de la tabla `productos`
 --
 ALTER TABLE `productos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT de la tabla `proveedores`
@@ -508,13 +534,13 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `ventas`
 --
 ALTER TABLE `ventas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT de la tabla `venta_detalles`
 --
 ALTER TABLE `venta_detalles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- Restricciones para tablas volcadas
@@ -585,8 +611,8 @@ ALTER TABLE `usuarios`
 ALTER TABLE `ventas`
   ADD CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`),
   ADD CONSTRAINT `ventas_ibfk_2` FOREIGN KEY (`id_caja`) REFERENCES `cajas` (`id`),
-  ADD CONSTRAINT `ventas_ibfk_mesa` FOREIGN KEY (`id_mesa`) REFERENCES `mesas` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `ventas_ibfk_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `clientes` (`id_cliente`);
+  ADD CONSTRAINT `ventas_ibfk_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `clientes` (`id_cliente`),
+  ADD CONSTRAINT `ventas_ibfk_mesa` FOREIGN KEY (`id_mesa`) REFERENCES `mesas` (`id`) ON DELETE SET NULL;
 
 --
 -- Filtros para la tabla `venta_detalles`
